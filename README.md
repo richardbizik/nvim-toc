@@ -13,9 +13,6 @@ Command will generate a table of contents of an opened markdown file on the curr
 
 # Example
 ```markdown
-
-# Table of contents
-
 # Table of contents
 1. [Table of contents](#table-of-contents)
 2. [h1](#h1)
