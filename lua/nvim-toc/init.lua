@@ -82,7 +82,7 @@ function M.setup(config)
             pattern = "*.md,*.markdown",
             callback = function()
                 -- create command to generate table of contents for markdown files at current cursor position
-                vim.api.nvim_create_user_command('TOC',
+                vim.api.nvim_buf_create_user_command(0, 'TOC',
                     function()
                         local toc = M.generate_md_toc()
                         local line = vim.api.nvim_win_get_cursor(0)[1]
