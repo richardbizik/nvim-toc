@@ -5,16 +5,16 @@ local ts_utils = require "nvim-treesitter.ts_utils"
 function M.get_toc(toc)
     local counters = { { i = 0 } }
     local previous_level = 1
-    local text = { "# Table of contents" }
+    local text = { "# " .. M.toc_header }
     for _, v in pairs(toc) do
         local line = ""
         local number = 0
         if v.level > previous_level then
-            for _ = previous_level, v.level-1 do
+            for _ = previous_level, v.level - 1 do
                 table.insert(counters, { i = 0 })
             end
         elseif v.level < previous_level then
-            for _ = v.level, previous_level-1 do
+            for _ = v.level, previous_level - 1 do
                 table.remove(counters, #counters)
             end
         end
@@ -65,7 +65,7 @@ function M.generate_md_toc()
             if type == "atx_h5_marker" then table_entry.level = 5 end
             if type == "atx_h6_marker" then table_entry.level = 6 end
         end
-        if name == "title" then
+        if name == "title" and text ~= M.toc_header then
             table_entry.title = (text:gsub("^%s*(.-)%s*$", "%1"))
             table.insert(toc, table_entry)
             table_entry = {}
@@ -75,18 +75,53 @@ function M.generate_md_toc()
     return M.get_toc(toc)
 end
 
+function M.get_toc_position()
+    local query = vim.treesitter.query.parse(
+        "markdown",
+        " [ (atx_heading heading_content: (_) @title (#eq? @title \"" .. M.toc_header .. "\")) ]"
+    )
+    local cursor_node = ts_utils.get_node_at_cursor()
+    for id, node, metadata in query:iter_captures(cursor_node:root(), 0) do
+        local name = query.captures[id] -- name of the capture in the query
+        local text = vim.treesitter.get_node_text(node, 0)
+
+        if name == "title" and text == M.toc_header then
+            -- find the parent section
+            local section = node:parent()
+
+            while section:parent() ~= nil and section:type() ~= "section" do
+                section = section:parent()
+            end
+            local startRow, startCol, endRow, endCol = section:range(false)
+            return startRow, startCol, endRow, endCol
+        end
+        break
+    end
+    return nil
+end
+
 function M.setup(config)
+    if config ~= nil then
+        if config.toc_header ~= nil then
+            M.toc_header = config.toc_header
+        end
+    end
     vim.api.nvim_create_autocmd(
         "BufEnter",
         {
             pattern = "*.md,*.markdown",
             callback = function()
-                -- create command to generate table of contents for markdown files at current cursor position
+                -- create command to generate/update table of contents for markdown files at current cursor position
                 vim.api.nvim_buf_create_user_command(0, 'TOC',
                     function()
                         local toc = M.generate_md_toc()
-                        local line = vim.api.nvim_win_get_cursor(0)[1]
-                        vim.api.nvim_buf_set_lines(0, line, line, true, toc)
+                        local startRow, _, endRow, _ = M.get_toc_position()
+                        if startRow ~= nil then
+                            vim.api.nvim_buf_set_lines(0, startRow, endRow-1, true, toc)
+                        else
+                            local line = vim.api.nvim_win_get_cursor(0)[1]
+                            vim.api.nvim_buf_set_lines(0, line - 1, line, true, toc)
+                        end
                     end,
                     { nargs = 0 }
                 )

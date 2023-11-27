@@ -11,6 +11,13 @@ Setup default command `:TOC` with `require('nvim-toc').setup({})`.
 Or you can setup your own command by calling `require('nvim-toc').generate_md_toc()` and handling the result yourself. The result of the command is a table containing lines of table of contents.
 Command will generate a table of contents of an opened markdown file on the current line.
 
+## Config options
+```lua
+require("nvim-toc").setup({
+  toc_header = "Table of Contents"
+})
+```
+
 # Example
 ```markdown
 # Table of contents
