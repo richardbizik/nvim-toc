@@ -2,6 +2,8 @@ local M = {}
 
 local ts_utils = require "nvim-treesitter.ts_utils"
 
+M.toc_header = "Table of contents"
+
 function M.get_toc(toc)
     local counters = { { i = 0 } }
     local previous_level = 1
@@ -117,7 +119,7 @@ function M.setup(config)
                         local toc = M.generate_md_toc()
                         local startRow, _, endRow, _ = M.get_toc_position()
                         if startRow ~= nil then
-                            vim.api.nvim_buf_set_lines(0, startRow, endRow-1, true, toc)
+                            vim.api.nvim_buf_set_lines(0, startRow, endRow - 1, true, toc)
                         else
                             local line = vim.api.nvim_win_get_cursor(0)[1]
                             vim.api.nvim_buf_set_lines(0, line - 1, line, true, toc)
