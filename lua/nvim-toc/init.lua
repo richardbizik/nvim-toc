@@ -4,7 +4,7 @@ local ts_utils = require "nvim-treesitter.ts_utils"
 
 M.toc_header = "Table of contents"
 
-function M.get_toc(toc)
+function M.get_toc_numbered(toc)
     local counters = { { i = 0 } }
     local previous_level = 1
     local text = { "# " .. M.toc_header }
@@ -34,7 +34,22 @@ function M.get_toc(toc)
     return text
 end
 
-function M.generate_md_toc()
+function M.get_toc_list(toc)
+    local text = { "# " .. M.toc_header }
+    for _, v in pairs(toc) do
+        local link = v.title:gsub("%s+", "-"):lower()
+        local line = ""
+        if v.level == 1 then
+            line = "- [" .. v.title .. "](#" .. link .. ")"
+        else
+            line = string.rep("  ", v.level - 1) .. "- [" .. v.title .. "](#" .. link .. ")"
+        end
+        table.insert(text, line)
+    end
+    return text
+end
+
+function M.generate_md_toc(format)
     local toc = {}
     local cursor_node = ts_utils.get_node_at_cursor()
     local query = vim.treesitter.query.parse(
@@ -74,7 +89,11 @@ function M.generate_md_toc()
         end
     end
 
-    return M.get_toc(toc)
+    if format == "list" then
+        return M.get_toc_list(toc)
+    else
+        return M.get_toc_numbered(toc)
+    end
 end
 
 function M.get_toc_position()
@@ -102,6 +121,17 @@ function M.get_toc_position()
     return nil
 end
 
+function M.TOC(opts)
+    local toc = M.generate_md_toc(opts.format)
+    local startRow, _, endRow, _ = M.get_toc_position()
+    if startRow ~= nil then
+        vim.api.nvim_buf_set_lines(0, startRow, endRow - 1, true, toc)
+    else
+        local line = vim.api.nvim_win_get_cursor(0)[1]
+        vim.api.nvim_buf_set_lines(0, line - 1, line, true, toc)
+    end
+end
+
 function M.setup(config)
     if config ~= nil then
         if config.toc_header ~= nil then
@@ -116,14 +146,13 @@ function M.setup(config)
                 -- create command to generate/update table of contents for markdown files at current cursor position
                 vim.api.nvim_buf_create_user_command(0, 'TOC',
                     function()
-                        local toc = M.generate_md_toc()
-                        local startRow, _, endRow, _ = M.get_toc_position()
-                        if startRow ~= nil then
-                            vim.api.nvim_buf_set_lines(0, startRow, endRow - 1, true, toc)
-                        else
-                            local line = vim.api.nvim_win_get_cursor(0)[1]
-                            vim.api.nvim_buf_set_lines(0, line - 1, line, true, toc)
-                        end
+                        M.TOC({ format = "numbered" })
+                    end,
+                    { nargs = 0 }
+                )
+                vim.api.nvim_buf_create_user_command(0, 'TOCList',
+                    function()
+                        M.TOC({ format = "list" })
                     end,
                     { nargs = 0 }
                 )
