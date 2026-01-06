@@ -1,7 +1,5 @@
 local M = {}
 
-local ts_utils = require "nvim-treesitter.ts_utils"
-
 M.toc_header = "Table of contents"
 
 function M.get_toc_numbered(toc)
